@@ -3,7 +3,7 @@ hydra:
     dir: ./
 
 object:
-  urdf_path: "objects/cube_small.urdf"
+  urdf_path: "/home/ironman/Documents/Coding/tacto/examples/objects/cube_small.urdf"
   base_position: [0.50, 0, 0.02]
   global_scaling: 0.6
 
@@ -14,7 +14,7 @@ tacto:
 
 sawyer_gripper:
   robot_params:
-    urdf_path: "robots/sawyer_wsg50.urdf"
+    urdf_path: "/home/ironman/Documents/Coding/tacto/examples/robots/sawyer_wsg50.urdf"
     use_fixed_base: True
   init_state:
     end_effector:

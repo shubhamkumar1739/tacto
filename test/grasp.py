@@ -16,7 +16,15 @@ import tacto
 
 from sawyer_gripper import SawyerGripper
 
+from torch import nn
+
 log = logging.getLogger(__name__)
+
+
+class Model(nn.Module) :
+
+    def __init__(self) :
+        
 
 
 # Load the config YAML file from examples/conf/grasp.yaml

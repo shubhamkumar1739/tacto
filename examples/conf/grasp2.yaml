@@ -1,0 +1,55 @@
+hydra:
+  run:
+    dir: ./
+
+object:
+  urdf_path: "/home/ironman/Documents/Coding/tacto/examples/objects/cube_small.urdf"
+  base_position: [0.5, 0, 0.2]
+  global_scaling: 0.6
+
+apple:
+  urdf_path: "/home/ironman/Downloads/Image Data/013_apple_google_16k/013_apple/google_16k/apple.urdf"
+  base_position: [1, 1, 0]
+  global_scaling: 6
+
+banana:
+  urdf_path: "/home/ironman/Downloads/Image Data/011_banana_google_16k/011_banana/google_16k/banana.urdf"
+  base_position: [0, 1, 0]
+  global_scaling: 6
+
+baseball:
+  urdf_path: "/home/ironman/Downloads/Image Data/055_baseball_google_16k/055_baseball/google_16k/baseball.urdf"
+  base_position: [0, 0.5, 0]
+  global_scaling: 6
+
+can :
+  urdf_path: "/home/ironman/Downloads/Image Data/002_master_chef_can_google_16k/002_master_chef_can/google_16k/can.urdf"
+  base_position: [0.5, 0.4, 0]
+  global_scaling: 6
+
+bottle :
+  urdf_path: "/home/ironman/Downloads/Image Data/006_mustard_bottle_google_16k/006_mustard_bottle/google_16k/bottle.urdf"
+  base_position: [0.5, 0.4, 0]
+  global_scaling: 6
+
+tacto:
+  width: 120
+  height: 160
+  visualize_gui: True
+
+sawyer_gripper:
+  robot_params:
+    urdf_path: "/home/ironman/Documents/Coding/tacto/examples/robots/sawyer_wsg50.urdf"
+    use_fixed_base: True
+  init_state:
+    end_effector:
+      position: [0.50, 0, 0.315]
+      # p.getQuaternionFromEuler([0, np.pi, 0])
+      orientation: [0.0, 1.0, 0.0, 0.0]
+    gripper_width: 0.11
+
+pybullet_camera:
+  cameraDistance: 0.6
+  cameraYaw: 15.
+  cameraPitch: -20.
+  cameraTargetPosition: [0.5, 0, 0.08]

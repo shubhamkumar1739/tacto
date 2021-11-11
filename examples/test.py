@@ -19,8 +19,26 @@ from sawyer_gripper import SawyerGripper
 log = logging.getLogger(__name__)
 
 
+def get_object_pose(objID):
+    res = p.getBasePositionAndOrientation(objID)
+
+    world_positions = res[0]
+    world_orientations = res[1]
+
+    objStartPos = [0.50, 0, 0.05]
+    objStartOrientation = p.getQuaternionFromEuler([0, 0, np.pi / 2])
+
+    if (world_positions[0] ** 2 + world_positions[1] ** 2) > 0.8 ** 2:
+        p.resetBasePositionAndOrientation(objID, objStartPos, objStartOrientation)
+        return objStartPos, objStartOrientation
+
+    world_positions = np.array(world_positions)
+    world_orientations = np.array(world_orientations)
+
+    return (world_positions, world_orientations)
+
 # Load the config YAML file from examples/conf/grasp.yaml
-@hydra.main(config_path="conf", config_name="grasp")
+@hydra.main(config_path="conf", config_name="grasp2")
 def main(cfg):
     # Initialize digits
     digits = tacto.Sensor(**cfg.tacto)
@@ -40,6 +58,21 @@ def main(cfg):
     obj = px.Body(**cfg.object)
     digits.add_body(obj, True)
 
+    # apple = px.Body(**cfg.apple)
+    # digits.add_body(apple, True)
+
+    # banana = px.Body(**cfg.banana)
+    # digits.add_body(banana, True)
+
+    baseball = px.Body(**cfg.baseball)
+    digits.add_body(baseball, True)
+
+    can = px.Body(**cfg.can)
+    digits.add_body(can, True)
+
+    bottle = px.Body(**cfg.bottle)
+    digits.add_body(bottle, True)
+
     np.set_printoptions(suppress=True)
 
     # run p.stepSimulation in another thread
@@ -54,6 +87,8 @@ def main(cfg):
     while True:
         color, depth = digits.render()
         digits.updateGUI(color, depth)
+
+        # px.simulationStep()
         time.sleep(0.1)
 
 

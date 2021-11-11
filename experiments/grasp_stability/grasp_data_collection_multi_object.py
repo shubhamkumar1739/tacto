@@ -13,6 +13,7 @@ import pybullet as pb
 import pybullet_data
 import tacto  # import TACTO
 from robot import Robot
+import pybulletX as px
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(filename="logs.log", level=logging.DEBUG)
@@ -88,6 +89,44 @@ def get_forces(bodyA=None, bodyB=None, linkIndexA=None, linkIndexB=None):
 
     return totalNormalForce, totalLateralFrictionForce
 
+def load_object() :
+    obj_list = [
+        {
+            "urdfObj" : "/home/ironman/Downloads/Image Data/006_mustard_bottle_google_16k/006_mustard_bottle/google_16k/bottle.urdf",
+            "scaling" : 4,
+            "pos" : [0.5, 0, 0.10]
+        },
+        {
+            "urdfObj" : "/home/ironman/Downloads/Image Data/002_master_chef_can_google_16k/002_master_chef_can/google_16k/can.urdf",
+            "scaling" : 4,
+            "pos" : [0.5, 0, 0.10]
+        },
+        {
+            "urdfObj" : "/home/ironman/Downloads/Image Data/013_apple_google_16k/013_apple/google_16k/apple.urdf",
+            "scaling" : 6,
+            "pos" : [0.5, 0, 0.10]
+        },
+        {
+            "urdfObj" : "/home/ironman/Downloads/Image Data/011_banana_google_16k/011_banana/google_16k/banana.urdf",
+            "scaling" : 7,
+            "pos" : [0.5, 0, 0.10] 
+        },
+        {
+            "urdfObj" : "/home/ironman/Downloads/Image Data/055_baseball_google_16k/055_baseball/google_16k/baseball.urdf",
+            "scaling" : 6,
+            "pos" : [0.5, 0, 0.10] 
+        },
+        {
+            "urdfObj" : "setup/objects/cube_small.urdf",
+            "scaling" : 0.6,
+            "pos" : [0.5, 0, 0.205]
+        }
+    ]
+    selectedObj = obj_list[4]
+    urdfObj = selectedObj["urdfObj"]
+    globalScaling = selectedObj["scaling"]
+    pos = selectedObj["pos"].copy()
+    return urdfObj, globalScaling, pos
 
 class Log:
     def __init__(self, dirName, id=0):
@@ -146,6 +185,7 @@ class Log:
 
 log = Log("data/grasp")
 
+px.init()
 # Initialize World
 logging.info("Initializing world")
 physicsClient = pb.connect(pb.DIRECT)
@@ -186,8 +226,8 @@ digits.add_camera(robotID, sensorLinks)
 nbJoint = pb.getNumJoints(robotID)
 
 # Add object to pybullet and tacto simulator
-urdfObj = "setup/objects/cube_small.urdf"
-globalScaling = 0.6
+# urdfObj = "setup/objects/cube_small.urdf"
+urdfObj, globalScaling, pos = load_object()
 objStartPos = [0.50, 0, 0.05]
 objStartOrientation = pb.getQuaternionFromEuler([0, 0, np.pi / 2])
 
@@ -219,14 +259,14 @@ time_vis = []
 
 dz = 0.003
 interval = 10
-posList = [
-    [0.50, 0, 0.205],
-    [0.50, 0, 0.213],
-    [0.50, 0.03, 0.205],
-    [0.50, 0.03, 0.213],
-]
-posID = 0
-pos = posList[posID].copy()
+# posList = [
+#     [0.50, 0, 0.205],
+#     [0.50, 0, 0.213],
+#     [0.50, 0.03, 0.205],
+#     [0.50, 0.03, 0.213],
+# ]
+# posID = 0
+# pos = posList[posID].copy()
 
 t = 0
 gripForce = 20
@@ -281,18 +321,18 @@ while True:
             label = 1
         # print("Success" if label == 1 else "Fail", end=" ")
 
-        log.save(
-            tactileColorL,
-            tactileColorR,
-            tactileDepthL,
-            tactileDepthR,
-            visionColor,
-            visionDepth,
-            gripForce,
-            normalForce,
-            label,
-        )
-        print("\rsample {}".format(log.id * log.batch_size + len(log.dataList)), end="")
+        # log.save(
+        #     tactileColorL,
+        #     tactileColorR,
+        #     tactileDepthL,
+        #     tactileDepthR,
+        #     visionColor,
+        #     visionDepth,
+        #     gripForce,
+        #     normalForce,
+        #     label,
+        # )
+        # print("\rsample {}".format(log.id * log.batch_size + len(log.dataList)), end="")
 
         # print("\rsample {}".format(log.id), end="")
 
@@ -310,7 +350,7 @@ while True:
         objRestartPos = [
             0.50 + 0.1 * np.random.random(),
             -0.15 + 0.3 * np.random.random(),
-            0.05,
+            0.0,
         ]
         objRestartOrientation = pb.getQuaternionFromEuler(
             [0, 0, 2 * np.pi * np.random.random()]
@@ -327,7 +367,6 @@ while True:
 
         gripForce = 5 + np.random.random() * 15
 
-        for 
         pb.resetBasePositionAndOrientation(objID, objRestartPos, objRestartOrientation)
         for i in range(100):
             pb.stepSimulation()

@@ -167,7 +167,7 @@ class Sensor:
                 orientation=orientation,  # [0, 0, 0],
             )
 
-    def add_body(self, body):
+    def add_body(self, body, isSDF=False):
         self.add_object(
             body.urdf_path, body.id, globalScaling=body.global_scaling or 1.0
         )
