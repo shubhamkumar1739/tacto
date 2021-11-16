@@ -89,7 +89,7 @@ def get_forces(bodyA=None, bodyB=None, linkIndexA=None, linkIndexB=None):
 
     return totalNormalForce, totalLateralFrictionForce
 
-def load_object() :
+def load_object(index) :
     parentDir = "/home/yan/Pybullet Objects/Pybullet Objects"
     obj_list = [
         {
@@ -129,7 +129,7 @@ def load_object() :
             "name" : "cube"
         }
     ]
-    selectedObj = obj_list[4]
+    selectedObj = obj_list[index]
     urdfObj = selectedObj["urdfObj"]
     globalScaling = selectedObj["scaling"]
     pos = selectedObj["pos"].copy()
@@ -191,7 +191,7 @@ class Log:
             self.id += 1
 
 
-# px.init()
+px.init()
 # Initialize World
 logging.info("Initializing world")
 physicsClient = pb.connect(pb.DIRECT)
@@ -233,13 +233,17 @@ nbJoint = pb.getNumJoints(robotID)
 
 # Add object to pybullet and tacto simulator
 # urdfObj = "setup/objects/cube_small.urdf"
-urdfObj, globalScaling, pos, target_file_name = load_object()
+urdfObj, globalScaling, pos, target_file_name = load_object(0)
 objStartPos = [0.50, 0, 0.05]
 objStartOrientation = pb.getQuaternionFromEuler([0, 0, np.pi / 2])
 
 objID = digits.loadURDF(
     urdfObj, objStartPos, objStartOrientation, globalScaling=globalScaling
 )
+
+objStartPos2 = [0.50, 0.005, 0.05]
+urdfObj2, globalScaling2, pos2, target_file_name2 = load_object(2)
+obj2Id = digits.loadURDF(urdfObj2, objStartPos2, objStartOrientation, globalScaling=globalScaling)
 
 sensorID = rob.get_id_by_name(["joint_finger_tip_right", "joint_finger_tip_left"])
 
@@ -290,97 +294,12 @@ log = Log("data/grasp/" + target_file_name)
 while True:
     # pick_and_place()
     t += 1
-    if t <= 50:
-        # Reaching
-        rob.go(pos, width=0.11)
-    elif t < 200:
-        # Grasping
-        rob.go(pos, width=0.03, gripForce=gripForce)
-    elif t == 200:
-        # Record sensor states
-        tactileColor, tactileDepth = digits.render()
-        tactileColorL, tactileColorR = tactileColor[0], tactileColor[1]
-        tactileDepthL, tactileDepthR = tactileDepth[0], tactileDepth[1]
+    result = pb.getContactPoints(objID, linkIndexA=-1) 
 
-        visionColor, visionDepth = cam.get_image()
-
-        digits.updateGUI(tactileColor, tactileDepth)
-
-        normalForce0, lateralForce0 = get_forces(robotID, objID, sensorID[0], -1)
-        normalForce1, lateralForce1 = get_forces(robotID, objID, sensorID[1], -1)
-        normalForce = [normalForce0, normalForce1]
-        # print("Normal Force Left", normalForce0, "Normal Force Right", normalForce1)
-        # print("normal force", normalForce, "lateral force", lateralForce)
-
-        objPos0, objOri0 = get_object_pose()
-    elif t > 200 and t <= 260:
-        # Lift
-        pos[-1] += dz
-        rob.go(pos)
-    elif t > 340:
-        # Save the data
-        objPos, objOri = get_object_pose()
-
-        if objPos[2] - objPos0[2] < 60 * dz * 0.8:
-            # Fail
-            label = 0
-            num_failures += 1
-        else:
-            # Success
-            label = 1
-            num_successes += 1
-        # print("Success" if label == 1 else "Fail", end=" ")
-
-        log.save(
-            tactileColorL,
-            tactileColorR,
-            tactileDepthL,
-            tactileDepthR,
-            visionColor,
-            visionDepth,
-            gripForce,
-            normalForce,
-            label,
-        )
-        print("\rsample {0} : num_successes : {1} num_failures : {2}".format(log.id * log.batch_size + len(log.dataList), num_successes, num_failures), end="")
-
-        # print("\rsample {}".format(log.id), end="")
-
-        if log.id > 2000:
-            break
-
-        # Reset
-        t = 0
-
-        # rob.go(pos, width=0.11)
-        # for i in range(100):
-        #     pb.stepSimulation()
-        rob.reset_robot()
-
-        objRestartPos = [
-            0.50 + 0.1 * np.random.random(),
-            -0.15 + 0.3 * np.random.random(),
-            0.0,
-        ]
-        objRestartOrientation = pb.getQuaternionFromEuler(
-            [0, 0, 2 * np.pi * np.random.random()]
-        )
-
-        pos = [
-            objRestartPos[0] + np.random.uniform(-0.02, 0.02),
-            objRestartPos[1] + np.random.uniform(-0.02, 0.02),
-            objRestartPos[2] * (1 + np.random.random() * 0.5) + 0.14,
-        ]
-        ori = [0, np.pi, 2 * np.pi * np.random.random()]
-        # pos = [0.50, 0, 0.205]
-        # pos = [np.random.random(0.3)]
-
-        gripForce = 5 + np.random.random() * 15
-
-        pb.resetBasePositionAndOrientation(objID, objRestartPos, objRestartOrientation)
-        for i in range(100):
-            pb.stepSimulation()
-
+    for item in result :
+        print("******",item[5])   
+    print("******************************************") 
+    # break
     pb.stepSimulation()
 
     st = time.time()

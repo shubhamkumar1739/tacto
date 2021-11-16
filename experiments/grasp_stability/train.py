@@ -185,8 +185,9 @@ class Model(nn.Module):
 
 
 class Learning:
-    def __init__(self, K, i, fields=None):
+    def __init__(self, target_folder, K, i, fields=None):
         self.fields = fields
+        self.target_folder = target_folder
 
         self.build_model()
         self.load_data(K, i)
@@ -208,7 +209,7 @@ class Learning:
 
         # rootDir = "data/test/"
         # rootDir = "data/resmid/"
-        rootDir = "/media/shawn/Extreme SSD/Code/stability/data/separate"
+        rootDir = "data/grasp/" + self.target_folder
         # fileNames = glob.glob(os.path.join(rootDir, "*.h5"))
         fileNames = glob.glob(os.path.join(rootDir, "*"))
         fileNames = sorted(fileNames)[: args.N]
@@ -409,6 +410,7 @@ K = 5
 
 def test(fields):
     N = args.N
+    target_folder = "baseball"
 
     print("N =", N)
     logDir = "logs/grasp"
@@ -422,7 +424,7 @@ def test(fields):
 
         print("Fold {} of {}".format(i, K), end=" ")
 
-        learner = Learning(K, i, fields=fields)
+        learner = Learning(target_folder, K, i, fields=fields)
         lossTrainList, accTestList = learner.train(10)
 
         fn = "{}/field{}_N{}_i{}.h5".format(logDir, fields, N, i)
@@ -435,7 +437,7 @@ def test(fields):
         print("time {:.3f}s".format(time.time() - st))
         accs.append(acc)
 
-        modelDir = "models/grasp"
+        modelDir = "models/grasp/" + target_folder
         os.makedirs(modelDir, exist_ok=True)
         fnModel = "{}/field{}_N{}_i{}.pth".format(modelDir, fields, N, i)
 
