@@ -252,7 +252,7 @@ obj2Id = digits.loadURDF(urdfObj2, objStartPos2, objStartOrientation, globalScal
 sensorID = rob.get_id_by_name(["joint_finger_tip_right", "joint_finger_tip_left"])
 
 
-def get_object_pose():
+def get_object_pose(objID):
     res = pb.getBasePositionAndOrientation(objID)
 
     world_positions = res[0]
@@ -309,35 +309,88 @@ def get_prediction(model, x) :
         prediction = prediction.argmax(axis=-1)
         # print(prediction)
     return prediction
-def restart() :
-    rob.reset_robot()
 
-    objRestartPos = [
-        0.50 + 0.1 * np.random.random(),
-        -0.15 + 0.3 * np.random.random(),
-        0.05,
-    ]
-    objRestartOrientation = pb.getQuaternionFromEuler(
-        [0, 0, 2 * np.pi * np.random.random()]
-    )
+def reset(environ) :
+    object_list = environ["object_id_list"]
+    rob = 
+    for objId in object_list :
+        objStartPos, objStartOrientation = get_obj_configuration(objId)
+        pb.resetBasePositionAndOrientation(objID, objStartPos, objStartOrientation)
+        for i in range(100) :
+            pb.stepSimulation()
 
-    pos = [
-        objRestartPos[0] + np.random.uniform(-0.02, 0.02),
-        objRestartPos[1] + np.random.uniform(-0.02, 0.02),
-        objRestartPos[2] * (1 + np.random.random() * 0.5) + 0.14,
-    ]
-    ori = [0, np.pi, 2 * np.pi * np.random.random()]
-    # pos = [0.50, 0, 0.205]
-    # pos = [np.random.random(0.3)]
-
-    gripForce = 5 + np.random.random() * 15
-
-    rob.go(pos + np.array([0, 0, 0.1]), ori=ori, width=0.11)
-    pb.resetBasePositionAndOrientation(objID, objRestartPos, objRestartOrientation)
-    for i in range(100):
+    robStartPos = environ["robStartPos"]
+    robStartOrientation = environ["robStartOrientation"]
+    rob.go(robStartPos, ori=robStartOrientation, width=0.11)
+    for i in range(100) :
         pb.stepSimulation()
 
-    return objRestartPos, objRestartOrientation, pos, ori, gripForce
+def get_feasibility(environ, models) :
+    feasibility_socres = []
+    num_attempts = 100
+    for i in range(num_attempts) :
+        score = attempt_grasp(environ, models)
+        if score is not None :
+            feasibility_socres.append(score)
+    reset(environ)
+    return feasibility_socres
+
+
+def get_approach_pose_and_force(target_obj) :
+    pass
+
+def attempt_grasp(environ, models) :
+    t = 0
+    reset(environ)
+    target_obj = environ["target_obj_id"]
+    object_list = environ["object_id_list"]
+    rob = environ["rob"]
+    model = models[target_obj]
+
+    pos, gripForce = get_approach_pose_and_force(target_obj)
+
+    prediction = None
+    graspPos = None
+    graspOri = None
+
+    while t < 2000 :
+        t += 1
+        if t <= 50 :
+            rob.go(pos, width=0.11)
+        elif t < 200 :
+            rob.go(pos, width=0.03, gripForce=gripForce)
+        elif t == 200 :
+            tactileColor, tactileDepth = digits.render()
+            tactileColorL, tactileColorR = tactileColor[0], tactileColor[1]
+
+            visionColor, visionDepth = cam.get_image()
+
+            digits.updateGUI(tactileColor, tactileDepth)
+
+            normalForce0, lateralForce0 = get_forces(robotID, objID, sensorID[0], -1)
+            normalForce1, lateralForce1 = get_forces(robotID, objID, sensorID[1], -1)
+            normalForce = [normalForce0, normalForce1]
+
+            x = {"tactileColorL" : tactileColorL, 
+            "tactileColorR" : tactileColorR, 
+            "visionColor" : visionColor}
+
+            # cv2.imshow("img", visionColor)
+            # cv2.waitKe
+            prediction = get_prediction(model, x)
+            graspPos, graspOri = get_object_pose()
+
+        contact_data = pb.getContactPoints(robotID)
+        collision = False
+        for item in contact_data :
+            if item[2] in object_list and item[2] != target_obj:
+                collision = True
+        if collision :
+            return None
+
+        pb.stepSimulation()
+        digits.update()
+    return prediction, graspPos, graspOri
 
 time_render = []
 time_vis = []
@@ -435,39 +488,5 @@ while num_attempts < 10000 and num_collisions < 10000:
         # for i in range(100):
         #     pb.stepSimulation()
         objRestartPos, objRestartOrientation, pos, ori, gripForce = restart()
-
-    result = pb.getContactPoints(robotID)
-
-    collision = False
-    for item in result :
-        if item[2] in objectList :
-            print(item[1], "Collision with ", item[2], item[5])
-            collision = True
-    if collision :
-        print("********collision*********")
-        num_collisions += 1
-        objRestartPos, objRestartOrientation, pos, ori, gripForce = restart()
-    # print(rob.gripperControlID)
-
-
-    # break
-    pb.stepSimulation()
-
-    st = time.time()
-    # color, depth = digits.render()
-
-    time_render.append(time.time() - st)
-    time_render = time_render[-100:]
-    # print("render {:.4f}s".format(np.mean(time_render)), end=" ")
-    st = time.time()
-
-    # digits.updateGUI(color, depth)
-
-    time_vis.append(time.time() - st)
-    time_vis = time_vis[-100:]
-
-    # print("visualize {:.4f}s".format(np.mean(time_vis)))
-
-    digits.update()
 
 pb.disconnect()  # Close PyBullet

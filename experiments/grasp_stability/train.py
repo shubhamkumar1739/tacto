@@ -410,7 +410,7 @@ K = 5
 
 def test(fields):
     N = args.N
-    target_folder = "baseball"
+    target_folder = "cube"
 
     print("N =", N)
     logDir = "logs/grasp"
@@ -454,12 +454,13 @@ def test(fields):
 fieldsList = [
     # ["tactileColorL", "tactileDepthL", "visionColor"],
     ["tactileColorL", "tactileColorR", "visionColor"],
-    ["visionColor"],
-    ["tactileColorL", "tactileColorR"],
+    # ["visionColor"],
+    # ["tactileColorL", "tactileColorR"],
     # ["tactileDepthL"],
     # ["tactileColorL", "visionDepth"],
     # ["tactileColorL", "tactileDepthL"],
 ]
 
-for fields in fieldsList:
-    test(fields)
+if __name__ == "__main__" :
+    for fields in fieldsList:
+        test(fields)

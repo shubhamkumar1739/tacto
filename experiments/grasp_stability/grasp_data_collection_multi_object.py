@@ -129,7 +129,7 @@ def load_object() :
             "name" : "cube"
         }
     ]
-    selectedObj = obj_list[4]
+    selectedObj = obj_list[5]
     urdfObj = selectedObj["urdfObj"]
     globalScaling = selectedObj["scaling"]
     pos = selectedObj["pos"].copy()
@@ -265,14 +265,14 @@ time_vis = []
 
 dz = 0.003
 interval = 10
-# posList = [
-#     [0.50, 0, 0.205],
-#     [0.50, 0, 0.213],
-#     [0.50, 0.03, 0.205],
-#     [0.50, 0.03, 0.213],
-# ]
-# posID = 0
-# pos = posList[posID].copy()
+posList = [
+    [0.50, 0, 0.205],
+    [0.50, 0, 0.213],
+    [0.50, 0.03, 0.205],
+    [0.50, 0.03, 0.213],
+]
+posID = 0
+pos = posList[posID].copy()
 
 t = 0
 gripForce = 20
@@ -360,7 +360,7 @@ while True:
         objRestartPos = [
             0.50 + 0.1 * np.random.random(),
             -0.15 + 0.3 * np.random.random(),
-            0.0,
+            0.05,
         ]
         objRestartOrientation = pb.getQuaternionFromEuler(
             [0, 0, 2 * np.pi * np.random.random()]
@@ -377,6 +377,7 @@ while True:
 
         gripForce = 5 + np.random.random() * 15
 
+        rob.go(pos + np.array([0, 0, 0.1]), ori=ori, width=0.11)
         pb.resetBasePositionAndOrientation(objID, objRestartPos, objRestartOrientation)
         for i in range(100):
             pb.stepSimulation()

@@ -13,6 +13,7 @@ import pybullet as pb
 import pybullet_data
 import tacto  # import TACTO
 from robot import Robot
+import pybulletX as px
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(filename="logs.log", level=logging.DEBUG)
@@ -147,6 +148,7 @@ class Log:
 log = Log("data/grasp")
 
 # Initialize World
+px.init()
 logging.info("Initializing world")
 physicsClient = pb.connect(pb.DIRECT)
 pb.setAdditionalSearchPath(pybullet_data.getDataPath())  # optionally
@@ -238,6 +240,8 @@ normalForceList0 = []
 normalForceList1 = []
 
 print("\n")
+num_successes = 0
+num_failures = 0
 
 while True:
     # pick_and_place()
@@ -276,9 +280,11 @@ while True:
         if objPos[2] - objPos0[2] < 60 * dz * 0.8:
             # Fail
             label = 0
+            num_failures += 1
         else:
             # Success
             label = 1
+            num_successes += 1
         # print("Success" if label == 1 else "Fail", end=" ")
 
         log.save(
@@ -292,7 +298,7 @@ while True:
             normalForce,
             label,
         )
-        print("\rsample {}".format(log.id * log.batch_size + len(log.dataList)), end="")
+        print("\rsample {0} num_successes : {1} num_failures : {2}".format(log.id * log.batch_size + len(log.dataList), num_successes, num_failures), end="")
 
         # print("\rsample {}".format(log.id), end="")
 
@@ -327,7 +333,6 @@ while True:
 
         gripForce = 5 + np.random.random() * 15
 
-        for 
         pb.resetBasePositionAndOrientation(objID, objRestartPos, objRestartOrientation)
         for i in range(100):
             pb.stepSimulation()
