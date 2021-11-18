@@ -93,52 +93,60 @@ def get_forces(bodyA=None, bodyB=None, linkIndexA=None, linkIndexB=None):
 
     return totalNormalForce, totalLateralFrictionForce
 
-def load_object(index) :
+randOri = [0, 0, np.pi]
+def load_object(objName) :
     parentDir = "/home/yan/Pybullet Objects/Pybullet Objects"
-    obj_list = [
-        {
+    obj_list = {
+        "bottle" : {
             "urdfObj" : parentDir + "/Image Data/006_mustard_bottle/google_16k/bottle.urdf",
             "scaling" : 4,
-            "pos" : [0.5, 0, 0.10],
+            "pos" : [0.5, 0.1, 0],
+            "ori" : randOri,
             "name" : "bottle"
         },
-        {
+        "can" : {
             "urdfObj" : parentDir + "/Image Data/002_master_chef_can/google_16k/can.urdf",
             "scaling" : 4,
-            "pos" : [0.5, 0, 0.10],
+            "pos" : [0.55, 0.15, 0.0],
+            "ori" : randOri,
             "name" : "can"
         },
-        {
+        "apple" : {
             "urdfObj" : parentDir + "/Image Data/013_apple/google_16k/apple.urdf",
             "scaling" : 6,
-            "pos" : [0.5, 0, 0.10],
+            "pos" : [0.45, 0.13, 0.0],
+            "ori" : randOri,
             "name" : "apple"
         },
-        {
+        "banana" : {
             "urdfObj" : parentDir + "/Image Data/011_banana/google_16k/banana.urdf",
             "scaling" : 7,
-            "pos" : [0.5, 0, 0.10],
+            "pos" : [0.45, 0.05, 0],
+            "ori" : randOri,
             "name" : "banana" 
         },
-        {
+        "baseball" : {
             "urdfObj" : parentDir + "/Image Data/055_baseball/google_16k/baseball.urdf",
             "scaling" : 6,
-            "pos" : [0.5, 0, 0.10],
+            "pos" : [0.5, 0.1, 0],
+            "ori" : randOri,
             "name" : "baseball" 
         },
-        {
+        "cube" : {
             "urdfObj" : "setup/objects/cube_small.urdf",
             "scaling" : 0.6,
-            "pos" : [0.5, 0, 0.205],
+            "pos" : [0.5, 0, 0],
+            "ori" : randOri,
             "name" : "cube"
         }
-    ]
-    selectedObj = obj_list[index]
+    }
+    selectedObj = obj_list[objName]
     urdfObj = selectedObj["urdfObj"]
     globalScaling = selectedObj["scaling"]
     pos = selectedObj["pos"].copy()
+    ori = pb.getQuaternionFromEuler(selectedObj["ori"].copy())
     name = selectedObj["name"]
-    return urdfObj, globalScaling, pos, name
+    return urdfObj, globalScaling, pos, ori, name
 
 class Log:
     def __init__(self, dirName, id=0):
@@ -194,63 +202,24 @@ class Log:
             self.dataList = []
             self.id += 1
 
+def create_objects(conf_dict) :
+    for objName in conf_dict :
+        objUrdf, globalScaling, objStartPos, objStartOrientation, target_file_name = load_object(objName)
+        objId = pb.loadURDF(objUrdf, objStartPos, objStartOrientation, globalScaling=globalScaling)
+        conf_dict[objName]["objId"] = objId
+        conf_dict[objName]["objStartPos"] = objStartPos
+        conf_dict[objName]["objStartOrientation"] = objStartOrientation
+        conf_dict[objName]["globalScaling"] = globalScaling
+        conf_dict[objName]["target_file_name"] = target_file_name
 
-px.init()
-# Initialize World
-logging.info("Initializing world")
-physicsClient = pb.connect(pb.DIRECT)
-pb.setAdditionalSearchPath(pybullet_data.getDataPath())  # optionally
-pb.setGravity(0, 0, -9.81)  # Major Tom to planet Earth
-
-# Initialize digits
-digits = tacto.Sensor(width=240, height=320, visualize_gui=False)
-
-
-pb.resetDebugVisualizerCamera(
-    cameraDistance=0.6,
-    cameraYaw=15,
-    cameraPitch=-20,
-    # cameraTargetPosition=[-1.20, 0.69, -0.77],
-    cameraTargetPosition=[0.5, 0, 0.08],
-)
-
-planeId = pb.loadURDF("plane.urdf")  # Create plane
-
-robotURDF = "setup/robots/sawyer_wsg50.urdf"
-# robotURDF = "robots/wsg50.urdf"
-robotID = pb.loadURDF(robotURDF, useFixedBase=True)
-rob = Robot(robotID)
-
-
-cam = Camera()
-color, depth = cam.get_image()
-
-
-rob.go(rob.pos, wait=True)
-
-sensorLinks = rob.get_id_by_name(
-    ["joint_finger_tip_left", "joint_finger_tip_right"]
-)  # [21, 24]
-digits.add_camera(robotID, sensorLinks)
-
-nbJoint = pb.getNumJoints(robotID)
-
-# Add object to pybullet and tacto simulator
-# urdfObj = "setup/objects/cube_small.urdf"
-urdfObj, globalScaling, pos, target_file_name = load_object(5)
-objStartPos = [0.50, 0, 0.05]
-objStartOrientation = pb.getQuaternionFromEuler([0, 0, np.pi / 2])
-
-objID = digits.loadURDF(
-    urdfObj, objStartPos, objStartOrientation, globalScaling=globalScaling
-)
-
-objStartPos2 = [0.50, 0.05, 0.0]
-urdfObj2, globalScaling2, pos2, target_file_name2 = load_object(2)
-obj2Id = digits.loadURDF(urdfObj2, objStartPos2, objStartOrientation, globalScaling=globalScaling)
-
-sensorID = rob.get_id_by_name(["joint_finger_tip_right", "joint_finger_tip_left"])
-
+def get_obj_configuration(objId, conf_dict) :
+    objStartPos = None
+    objStartOrientation = None
+    for objName in conf_dict :
+        if conf_dict[objName]["objId"] == objId :
+            objStartPos = conf_dict[objName]["objStartPos"]
+            objStartOrientation = conf_dict[objName]["objStartOrientation"]
+    return objStartPos, objStartOrientation
 
 def get_object_pose(objID):
     res = pb.getBasePositionAndOrientation(objID)
@@ -267,91 +236,80 @@ def get_object_pose(objID):
 
     return (world_positions, world_orientations)
 
-transform = transforms.Compose(
-            [
-                transforms.ToPILImage(),
-                transforms.Resize(256),
-                transforms.RandomCrop(224),
-                # transforms.RandomHorizontalFlip(p=0.5),
-                transforms.ToTensor(),
-                transforms.Normalize(mean=(0.5,), std=(0.5,)),
-            ]
-        )
-transformDepth = transforms.Compose(
-            [
-                transforms.ToPILImage(),
-                transforms.Resize(256),
-                transforms.RandomCrop(224),
-                # transforms.RandomHorizontalFlip(p=0.5),
-                transforms.ToTensor(),
-                transforms.Normalize(mean=(0.1,), std=(0.2,)),
-                # AddGaussianNoise(0.0, 0.01),
-            ]
-        )
-# testDataset = GraspingDataset(
-#             testFileNames,
-#             fields=["tactileColorL", "tactileColorR", "visionColor"],
-#             transform=transform,
-#             transformDepth=transformDepth,
-#         )
-# testLoader = torch.utils.data.DataLoader(
-#     testDataset, batch_size=32, shuffle=False, num_workers=12, pin_memory=True
-# )
-
-def get_prediction(model, x) :
+def get_prediction(model, x, transform) :
     for k in x :
         x[k] = x[k][:, :, :3]
         x[k] = transform(x[k])
-        x[k] = torch.reshape(x[k], [1, 3, 224, 224])       # print(k, x[k].shape, x[k].type)
+        x[k] = torch.reshape(x[k], [1, 3, 224, 224]).to(torch.device("cuda:0"))       # print(k, x[k].shape, x[k].type)
     prediction = None
+    print(x)
     with torch.no_grad() :
         prediction = model(x)
         prediction = prediction.argmax(axis=-1)
-        # print(prediction)
     return prediction
 
 def reset(environ) :
     object_list = environ["object_id_list"]
-    rob = 
-    for objId in object_list :
-        objStartPos, objStartOrientation = get_obj_configuration(objId)
-        pb.resetBasePositionAndOrientation(objID, objStartPos, objStartOrientation)
-        for i in range(100) :
-            pb.stepSimulation()
-
+    rob = environ["rob"]
+    conf_dict = environ["conf_dict"]
+    rob.reset_robot()
     robStartPos = environ["robStartPos"]
-    robStartOrientation = environ["robStartOrientation"]
-    rob.go(robStartPos, ori=robStartOrientation, width=0.11)
+    rob.go([0.5, 0, 0.2], width=0.11)
+    for i in range(100) :
+        pb.stepSimulation()
+    for objId in object_list :
+        objStartPos, objStartOrientation = get_obj_configuration(objId, conf_dict)
+        pb.resetBasePositionAndOrientation(objId, objStartPos, objStartOrientation)
+
     for i in range(100) :
         pb.stepSimulation()
 
-def get_feasibility(environ, models) :
+def get_feasibility(environ, model) :
     feasibility_socres = []
-    num_attempts = 100
+    num_attempts = 10
     for i in range(num_attempts) :
-        score = attempt_grasp(environ, models)
+        score = attempt_grasp(environ, model)
         if score is not None :
             feasibility_socres.append(score)
     reset(environ)
     return feasibility_socres
 
 
-def get_approach_pose_and_force(target_obj) :
-    pass
+def get_approach_pose_and_force(environ, target_obj) :
+    # minAABB, maxAABB = pb.getAABB(target_obj)
+    # random_x = (maxAABB[0] + minAABB[0]) / 2
+    # random_y = (minAABB[1] + maxAABB[1]) / 2
+    # random_z = 0.1
+    conf_dict = environ["conf_dict"]
+    objRestartPos = conf_dict["cube"]["objStartPos"]
+    pos = [
+            objRestartPos[0] + np.random.uniform(-0.02, 0.02),
+            objRestartPos[1] + np.random.uniform(-0.02, 0.02),
+            objRestartPos[2] * (1 + np.random.random() * 0.5) + 0.14,
+        ]
 
-def attempt_grasp(environ, models) :
+    gripForce = 5 + np.random.random() * 15
+    return pos, gripForce
+
+def attempt_grasp(environ, model) :
     t = 0
     reset(environ)
     target_obj = environ["target_obj_id"]
     object_list = environ["object_id_list"]
+    transform = environ["transform"]
     rob = environ["rob"]
-    model = models[target_obj]
+    digits = environ["digits"]
+    sensorID = environ["sensorID"]
+    robotID = environ["robotID"]
+    cam = environ["cam"]
 
-    pos, gripForce = get_approach_pose_and_force(target_obj)
+    pos, gripForce = get_approach_pose_and_force(environ, target_obj)
 
     prediction = None
     graspPos = None
     graspOri = None
+
+    dz = 0.003
 
     while t < 2000 :
         t += 1
@@ -367,18 +325,35 @@ def attempt_grasp(environ, models) :
 
             digits.updateGUI(tactileColor, tactileDepth)
 
-            normalForce0, lateralForce0 = get_forces(robotID, objID, sensorID[0], -1)
-            normalForce1, lateralForce1 = get_forces(robotID, objID, sensorID[1], -1)
-            normalForce = [normalForce0, normalForce1]
-
             x = {"tactileColorL" : tactileColorL, 
             "tactileColorR" : tactileColorR, 
             "visionColor" : visionColor}
 
-            # cv2.imshow("img", visionColor)
-            # cv2.waitKe
-            prediction = get_prediction(model, x)
-            graspPos, graspOri = get_object_pose()
+            prediction = get_prediction(model, x, transform)
+            graspPos, graspOri = get_object_pose(target_obj)
+
+        elif t > 200 and t <= 260:
+            # Lift
+            pos[-1] += dz
+            rob.go(pos)
+        elif t > 340:
+            # Save the data
+            objPos, objOri = get_object_pose(target_obj)
+
+            if objPos[2] - graspPos[2] < 60 * dz * 0.8:
+                # Fail
+                label = 0
+                # num_failures += 1
+            else:
+                # Success
+                label = 1
+                # num_successes += 1
+
+            if label == prediction :
+                print(True)
+            else :
+                print(False)
+            break
 
         contact_data = pb.getContactPoints(robotID)
         collision = False
@@ -392,101 +367,106 @@ def attempt_grasp(environ, models) :
         digits.update()
     return prediction, graspPos, graspOri
 
-time_render = []
-time_vis = []
+def main() :
+    px.init()
+    # Initialize World
+    physicsClient = pb.connect(pb.DIRECT)
+    pb.setGravity(0, 0, -9.81)  # Major Tom to planet Earth
 
-dz = 0.003
-interval = 10
-# posList = [
-#     [0.50, 0, 0.205],
-#     [0.50, 0, 0.213],
-#     [0.50, 0.03, 0.205],
-#     [0.50, 0.03, 0.213],
-# ]
-# posID = 0
-# pos = posList[posID].copy()
+    # Initialize digits
+    digits = tacto.Sensor(width=240, height=320, visualize_gui=False)
 
-t = 0
-gripForce = 20
 
-color, depth = digits.render()
-digits.updateGUI(color, depth)
+    pb.resetDebugVisualizerCamera(
+        cameraDistance=0.6,
+        cameraYaw=15,
+        cameraPitch=-20,
+        # cameraTargetPosition=[-1.20, 0.69, -0.77],
+        cameraTargetPosition=[0.5, 0, 0.08],
+    )
 
-normalForceList0 = []
-normalForceList1 = []
-objectList = [obj2Id]
+    planeId = pb.loadURDF("plane.urdf")  # Create plane
 
-num_attempts = 0
-num_collisions = 0
-
-model_path = "models/grasp/" + target_file_name + "/field['tactileColorL', 'tactileColorR', 'visionColor']_N120_i4.pth"
-# model = torch.load(model_path)
-model = Model(["tactileColorL", "tactileColorR", "visionColor"])
-model.load(model_path)
-model.eval()
-print("Model created")
-
-print("\n")
-log = Log("data/grasp/" + target_file_name)
-while num_attempts < 10000 and num_collisions < 10000:
-    # pick_and_place()
-    t += 1
-    if t <= 50 :
-        rob.go(pos, width=0.11)
-    elif t < 200 :
-        rob.go(pos, width=0.03, gripForce=gripForce)
-    elif t == 200 :
-        tactileColor, tactileDepth = digits.render()
-        tactileColorL, tactileColorR = tactileColor[0], tactileColor[1]
-        tactileDepthL, tactileDepthR = tactileDepth[0], tactileDepth[1]
-
-        visionColor, visionDepth = cam.get_image()
-
-        digits.updateGUI(tactileColor, tactileDepth)
-
-        normalForce0, lateralForce0 = get_forces(robotID, objID, sensorID[0], -1)
-        normalForce1, lateralForce1 = get_forces(robotID, objID, sensorID[1], -1)
-        normalForce = [normalForce0, normalForce1]
-
-        x = {"tactileColorL" : tactileColorL, 
-        "tactileColorR" : tactileColorR, 
-        "visionColor" : visionColor}
-
-        # cv2.imshow("img", visionColor)
-        # cv2.waitKe
-        prediction = get_prediction(model, x)
-        # print(prediction)
-
-        objPos0, objOri0 = get_object_pose()
-    elif t <= 260 :
-        pos[-1] += dz
-        rob.go(pos)
-    elif t > 340 :
-        objPos, objOri = get_object_pose()
-
-        if objPos[2] - objPos0[2] < 60 * dz * 0.8:
-            # Fail
-            label = 0
-        else:
-            # Success
-            label = 1
-
-        if prediction == label :
-            print("Correct prediction", prediction)
-        else :
-            print("Prediction", prediction, "label: ", label)
-
-        num_attempts += 1
+    robotURDF = "setup/robots/sawyer_wsg50.urdf"
+    # robotURDF = "robots/wsg50.urdf"
+    robotID = pb.loadURDF(robotURDF, useFixedBase=True)
     
-        if label == 1 :
-            # some code
-            pass
+    rob = Robot(robotID)
 
-        t = 0
+    cam = Camera()
+    color, depth = cam.get_image()
 
-        # rob.go(pos, width=0.11)
-        # for i in range(100):
-        #     pb.stepSimulation()
-        objRestartPos, objRestartOrientation, pos, ori, gripForce = restart()
 
-pb.disconnect()  # Close PyBullet
+    rob.go(rob.pos, wait=True)
+
+    sensorLinks = rob.get_id_by_name(
+        ["joint_finger_tip_left", "joint_finger_tip_right"]
+    )  # [21, 24]
+    digits.add_camera(robotID, sensorLinks)
+
+    nbJoint = pb.getNumJoints(robotID)
+
+    sensorID = rob.get_id_by_name(["joint_finger_tip_right", "joint_finger_tip_left"])
+
+    transform = transforms.Compose(
+            [
+                transforms.ToPILImage(),
+                transforms.Resize(256),
+                transforms.RandomCrop(224),
+                # transforms.RandomHorizontalFlip(p=0.5),
+                transforms.ToTensor(),
+                transforms.Normalize(mean=(0.5,), std=(0.5,)),
+            ]
+        )
+
+    color, depth = digits.render()
+    digits.updateGUI(color, depth)
+
+    conf_dict = {
+        "cube" : {},
+        # "banana" : {},
+        # "apple" : {},
+        # "baseball" : {},
+        # "can" : {},
+        # "bottle" : {}
+    }
+
+    object_id_list = []
+    target_obj_name = "cube"
+    target_obj_id = None
+    create_objects(conf_dict)
+    for objName in conf_dict :
+        object_id_list.append(conf_dict[objName]["objId"])
+        if target_obj_name == objName :
+            target_obj_id = conf_dict[objName]["objId"]
+
+
+    target_model_path = "models/grasp/cube/field['tactileColorL', 'tactileColorR', 'visionColor']_N120_i4.pth"
+    model = Model(["tactileColorL", "tactileColorR", "visionColor"])
+    device = torch.device("cuda:0")
+    model.to(device)
+    model.load(target_model_path)
+    model.eval()
+
+    environ = {}
+
+    environ["rob"] = rob
+    environ["robStartPos"] = rob.pos
+    environ["cam"] = cam
+    environ["digits"] = digits
+    environ["sensorID"] = sensorID
+    environ["target_obj_id"] = target_obj_id
+    environ["object_id_list"] = object_id_list
+    environ["transform"] = transform
+    environ["robStartPos"] = [0.5, 0.0, 0.1]
+    environ["robotID"] = robotID
+    environ["conf_dict"] = conf_dict
+
+    feasibility_socres = get_feasibility(environ, model)
+    for score in feasibility_socres :
+        print(score[0])
+
+    pb.disconnect()  # Close PyBullet
+
+if __name__ == '__main__':
+    main()

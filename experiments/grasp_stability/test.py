@@ -302,8 +302,9 @@ def get_prediction(model, x) :
     for k in x :
         x[k] = x[k][:, :, :3]
         x[k] = transform(x[k])
-        x[k] = torch.reshape(x[k], [1, 3, 224, 224])       # print(k, x[k].shape, x[k].type)
+        x[k] = torch.reshape(x[k], [1, 3, 224, 224]).to(torch.device("cuda:0"))
     prediction = None
+    print(x)
     with torch.no_grad() :
         prediction = model(x)
         prediction = prediction.argmax(axis=-1)
@@ -369,6 +370,7 @@ num_collisions = 0
 model_path = "models/grasp/" + target_file_name + "/field['tactileColorL', 'tactileColorR', 'visionColor']_N120_i4.pth"
 # model = torch.load(model_path)
 model = Model(["tactileColorL", "tactileColorR", "visionColor"])
+model.to(torch.device("cuda:0"))
 model.load(model_path)
 model.eval()
 print("Model created")
